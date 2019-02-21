@@ -48,6 +48,7 @@ found:
   p->pid = nextpid++;
   //Set default tickets to 10
   p->tickets = 10;
+  p->stride = 500 / p->tickets;
   release(&ptable.lock);
 
   // Allocate kernel stack if possible.
@@ -151,6 +152,11 @@ fork(void)
   np->parent = proc;
   *np->tf = *proc->tf;
 
+
+   //Send parent tickets & stride to child
+   np->tickets = proc->tickets;
+   np->stride = proc->stride;
+
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
 
@@ -162,6 +168,7 @@ fork(void)
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
+
   return pid;
 }
 
@@ -253,20 +260,24 @@ wait(void)
 
 int settickets(int tickets) {
 
-	if(tickets < 1)
+	if(tickets < 10 || tickets > 200)
 	{
-		return -1;
+		if(tickets %10 != 0)
+		{
+			tickets = 10;
+		}
 	}
 
 	proc->tickets = tickets;
+	proc->stride = 500/tickets;
 	return 0;
 }
 
-int getpinfo(struct pstat *ps)
+int getpinfo(struct pstat *pstat)
 {
 	struct proc *p;
 
-	if(ps == NULL)
+	if(pstat == NULL)
 	{
 		return -1;
 	}
@@ -275,15 +286,15 @@ int getpinfo(struct pstat *ps)
 	int i = 0;
 
 
-	//Locak P-table
+	//Lock P-table
 	acquire(&ptable.lock);
 
 	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++, i++)
 	{
-		ps->inuse[i] = ((p->state == UNUSED)?0:1);
-		ps->pid[i] = p->pid;    //Grab PID of process from Proc struct
-		ps->tickets[i] = p->tickets;  //Grab amount of tickets
-		ps->ticks[i] = p->ticks;  //Process ticks
+		pstat->inuse[i] = ((p->state == UNUSED)?0:1);
+		pstat->pid[i] = p->pid;    //Grab PID of process from Proc struct
+		pstat->tickets[i] = p->tickets;  //Grab amount of tickets
+		pstat->ticks[i] = p->ticks;  //Process ticks
 	}
 	
 	//Release P-table lock
@@ -308,16 +319,10 @@ void
 scheduler(void)
 {
   struct proc *p;
-  int found = 1;
 
   for(;;){
     // Enable interrupts on this processor.
     sti();
-
-
-    //Added Mini-project2
-    int totalTICK = 0;
-    int tickPASS = 0;
 
 
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -325,25 +330,8 @@ scheduler(void)
 			continue;
 		}
 
-		if(totalTICK >= 10 && totalTICK <= 200){
-			totalTICK = totalTICK + p->tickets;
-		}
+	cprintf("\nAbout to run Name: %s , PID: %d, with %d amount of tickets and a stride of %d\n", p->name, p->pid, p->tickets, p->stride);
    }
-
-    //Test winner
-    int winner = 10;
-    //Added Mini-project2
-    if(!found)
-	{
-		totalTICK = totalTICK + 10;
-	}
-
-    found = 0;
-
-
-
-
-
 
 
     // Loop over process table looking for process to run.
@@ -352,13 +340,6 @@ scheduler(void)
       if(p->state != RUNNABLE){
         continue;
 	}
-
-
-	//Added Mini-project2
-	tickPASS = tickPASS + p->tickets;
-	if(tickPASS < winner)
-		continue;
-	found = 1;
 
 
 
