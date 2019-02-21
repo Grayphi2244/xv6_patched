@@ -318,46 +318,52 @@ int getpinfo(struct pstat *pstat)
 void
 scheduler(void)
 {
-  struct proc *p;
+  struct proc *p, *minPassProc;
+  int maxPass;
 
   for(;;){
+    cprintf("lets start scheduling\n");
     // Enable interrupts on this processor.
     sti();
 
-
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-		if(p->state != RUNNABLE){
-			continue;
-		}
-
-	cprintf("\nAbout to run Name: %s , PID: %d, with %d amount of tickets and a stride of %d\n", p->name, p->pid, p->tickets, p->stride);
-   }
-
+    //reset maxPass
+     maxPass = 201;
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+    cprintf("looking for process\n");
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE){
-        continue;
-	}
 
+      cprintf("are you runnable\n");
+      if(p->state != RUNNABLE){
+        cprintf("no");
+        continue;
+	    }
+      cprintf("yes, are you less than max Pass?\n");
+      if(p->pass < maxPass){
+          maxPass = p->pass;
+          minPassProc = p;
+          cprintf("MinPassProc pid is %d\n", minPassProc->pid);
+        }
+    
 
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-      proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-      swtch(&cpu->scheduler, proc->context);
-      switchkvm();
-
+        proc = minPassProc;
+        switchuvm(minPassProc);
+        minPassProc->ticks = minPassProc->ticks + 1; 
+        minPassProc->pass = minPassProc->pass + minPassProc->stride; 
+        minPassProc->state = RUNNING;
+        cprintf("\nAbout to run Name: %s , PID: %d, with %d amount of tickets and a stride of %d\n", p->name, p->pid, p->tickets, p->stride);
+        swtch(&cpu->scheduler, proc->context);
+        switchkvm();
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       proc = 0;
     }
     release(&ptable.lock);
-
   }
 }
 
