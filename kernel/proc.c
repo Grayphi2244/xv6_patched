@@ -251,6 +251,52 @@ wait(void)
   }
 }
 
+int settickets(int tickets) {
+
+	if(tickets < 1)
+	{
+		return -1;
+	}
+
+	proc->tickets = tickets;
+	return 0;
+}
+
+int getpinfo(struct pstat *ps)
+{
+	struct proc *p;
+
+	if(ps == NULL)
+	{
+		return -1;
+	}
+
+	//Initialize counter
+	int i = 0;
+
+
+	//Locak P-table
+	acquire(&ptable.lock);
+
+	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++, i++)
+	{
+		ps->inuse[i] = ((p->state == UNUSED)?0:1);
+		ps->pid[i] = p->pid;    //Grab PID of process from Proc struct
+		ps->tickets[i] = p->tickets;  //Grab amount of tickets
+		ps->ticks[i] = p->ticks;  //Process ticks
+	}
+	
+	//Release P-table lock
+	release(&ptable.lock);
+
+	return 0;
+}
+
+
+
+
+
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -279,17 +325,17 @@ scheduler(void)
 			continue;
 		}
 
-		if(totalTICK >= 10 || totalTICK <= 200){
+		if(totalTICK >= 10 && totalTICK <= 200){
 			totalTICK = totalTICK + p->tickets;
 		}
    }
 
     //Test winner
-    int winner = 150;
+    int winner = 10;
     //Added Mini-project2
     if(!found)
 	{
-		//Something happens if not found
+		totalTICK = totalTICK + 10;
 	}
 
     found = 0;
