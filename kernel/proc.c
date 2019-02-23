@@ -97,6 +97,9 @@ userinit(void)
   p->tf->eflags = FL_IF;
   p->tf->esp = PGSIZE;
   p->tf->eip = 0;  // beginning of initcode.S
+   //Set default tickets to 10
+  p->tickets = 10;
+  p->stride = 500 / p->tickets;
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
@@ -319,31 +322,25 @@ void
 scheduler(void)
 {
   struct proc *p, *minPassProc;
-  int maxPass;
+  //int maxPass;
 
   for(;;){
-    cprintf("lets start scheduling\n");
     // Enable interrupts on this processor.
     sti();
 
     //reset maxPass
-     maxPass = 201;
+    // maxPass = 201;
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    cprintf("looking for process\n");
+    minPassProc = ptable.proc;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
 
-      cprintf("are you runnable\n");
       if(p->state != RUNNABLE){
-        cprintf("no");
         continue;
 	    }
-      cprintf("yes, are you less than max Pass?\n");
-      if(p->pass < maxPass){
-          maxPass = p->pass;
+      if(p->pass < minPassProc->pass){
           minPassProc = p;
-          cprintf("MinPassProc pid is %d\n", minPassProc->pid);
         }
     
 
@@ -356,7 +353,7 @@ scheduler(void)
         minPassProc->ticks = minPassProc->ticks + 1; 
         minPassProc->pass = minPassProc->pass + minPassProc->stride; 
         minPassProc->state = RUNNING;
-        cprintf("\nAbout to run Name: %s , PID: %d, with %d amount of tickets and a stride of %d\n", p->name, p->pid, p->tickets, p->stride);
+        cprintf("\nAbout to run Name: %s , PID: %d, with %d amount of tickets  a pass of %d and a stride of %d\n", p->name, p->pid, p->tickets, p->pass, p->stride);
         swtch(&cpu->scheduler, proc->context);
         switchkvm();
       // Process is done running for now.
