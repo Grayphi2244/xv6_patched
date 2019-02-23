@@ -97,9 +97,10 @@ userinit(void)
   p->tf->eflags = FL_IF;
   p->tf->esp = PGSIZE;
   p->tf->eip = 0;  // beginning of initcode.S
+
    //Set default tickets to 10
-  p->tickets = 10;
-  p->stride = 500 / p->tickets;
+ // p->tickets = 10;
+  //p->stride = 500 / p->tickets;
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
@@ -262,15 +263,17 @@ wait(void)
 }
 
 int settickets(int tickets) {
-
+  
+  //make sure tickets are between 10 and 200 and a multiple of 10 
 	if(tickets < 10 || tickets > 200)
 	{
 		if(tickets %10 != 0)
 		{
-			tickets = 10;
+			tickets = 10; //set tickets to the default value of 10
 		}
 	}
 
+  //set the tickets and stride value 
 	proc->tickets = tickets;
 	proc->stride = 500/tickets;
 	return 0;
@@ -322,23 +325,22 @@ void
 scheduler(void)
 {
   struct proc *p, *minPassProc;
-  //int maxPass;
 
   for(;;){
     // Enable interrupts on this processor.
     sti();
 
     //reset maxPass
-    // maxPass = 201;
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    minPassProc = ptable.proc;
+    minPassProc = ptable.proc; //set minPassProc to first process to make sure something will run
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
 
       if(p->state != RUNNABLE){
         continue;
 	    }
+      //check if process has less pass than the current minPass process and if so change minPass to be the current process 
       if(p->pass < minPassProc->pass){
           minPassProc = p;
         }
@@ -350,8 +352,8 @@ scheduler(void)
       // before jumping back to us.
         proc = minPassProc;
         switchuvm(minPassProc);
-        minPassProc->ticks = minPassProc->ticks + 1; 
-        minPassProc->pass = minPassProc->pass + minPassProc->stride; 
+        minPassProc->ticks = minPassProc->ticks + 1; //add ome more to the ticks 
+        minPassProc->pass = minPassProc->pass + minPassProc->stride; //add the stride to the pass 
         minPassProc->state = RUNNING;
         cprintf("\nAbout to run Name: %s , PID: %d, with %d amount of tickets  a pass of %d and a stride of %d\n", p->name, p->pid, p->tickets, p->pass, p->stride);
         swtch(&cpu->scheduler, proc->context);
