@@ -7,7 +7,8 @@
 #include "sysfunc.h"
 #include "pstat.h"
 
-
+extern int getpinfo(struct pstat *);
+extern int settickets(int);
 extern int totalCall;
 extern int tickets;
 
@@ -106,21 +107,17 @@ int
 sys_setTICK(int tickets)
 {
 
-	proc->tickets = tickets;
-	return tickets;
+	return settickets(tickets);
 }
 
 int
 sys_getpinfo(void)
 {
 
-/*
+
 	struct pstat *pS;
 
-	int inuse = pS->inuse;
-	int tickets = pS->tickets;
-	int pid = pS->pid;
-	int ticks = pS->ticks;
-*/
-	return 0;
+	argptr( 0, (void*)&pS , sizeof(*pS));
+
+	return getpinfo(pS);
 }

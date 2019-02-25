@@ -301,6 +301,10 @@ int getpinfo(struct pstat *pstat)
 		pstat->pid[i] = p->pid;    //Grab PID of process from Proc struct
 		pstat->tickets[i] = p->tickets;  //Grab amount of tickets
 		pstat->ticks[i] = p->ticks;  //Process ticks
+
+	cprintf("Process with a PID of %s, has %d tickets, and %d ticks", pstat->pid[i], pstat->tickets[i], pstat->ticks[i]);
+
+
 	}
 	
 	//Release P-table lock
@@ -355,7 +359,7 @@ scheduler(void)
         minPassProc->ticks = minPassProc->ticks + 1; //add ome more to the ticks 
         minPassProc->pass = minPassProc->pass + minPassProc->stride; //add the stride to the pass 
         minPassProc->state = RUNNING;
-        cprintf("\nAbout to run Name: %s , PID: %d, with %d amount of tickets  a pass of %d and a stride of %d\n", p->name, p->pid, p->tickets, p->pass, p->stride);
+//        cprintf("\nAbout to run Name: %s , PID: %d, with %d amount of tickets  a pass of %d and a stride of %d\n", p->name, p->pid, p->tickets, p->pass, p->stride);
         swtch(&cpu->scheduler, proc->context);
         switchkvm();
       // Process is done running for now.
