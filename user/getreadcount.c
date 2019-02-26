@@ -1,6 +1,7 @@
 #include "types.h"
 #include "stat.h"
 #include "user.h"
+#include "pstat.h"
 
 int main(void)
 {
@@ -8,11 +9,14 @@ int main(void)
 	int pid =fork();
 	if (pid == 0){
 		pid = setTICK(50);
-		printf(1,"hi\n");
 	}
 	pid = setTICK(150);
-	printf(1, "my name is sam\n");
 	printf(1, "setTICK is %d", pid);
+
+	struct pstat *pS = malloc(sizeof(struct pstat));
+	getpinfo(pS);
+
+	printf(1, "Tickets equals %d \n", pS->tickets);
 
 	wait();
 	exit();

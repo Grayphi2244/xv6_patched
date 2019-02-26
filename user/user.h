@@ -28,7 +28,7 @@ int sleep(int);
 int uptime(void);
 int getreadcount(void);
 int setTICK(int);
-int getpinfo(struct pstat*);
+int getpinfo(struct pstat *);
 
 
 // user library functions (ulib.c)
