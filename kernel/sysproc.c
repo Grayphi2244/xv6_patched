@@ -107,7 +107,15 @@ int
 sys_setTICK(int tickets)
 {
 
-	return settickets(tickets);
+	argint(0, &tickets);
+
+	cprintf("Passing %d Tickets to Syscall  BEFORE \n", tickets);
+
+	proc->tickets = tickets;
+
+	cprintf("Passing %d Tickets to Syscall  AFTER \n", proc->tickets); 
+
+	return 0;
 }
 
 int
