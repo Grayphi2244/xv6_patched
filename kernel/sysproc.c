@@ -109,11 +109,11 @@ sys_setTICK(int tickets)
 
 	argint(0, &tickets);
 
-	cprintf("Passing %d Tickets to Syscall  BEFORE \n", tickets);
+	//cprintf("Passing %d Tickets to Syscall  BEFORE \n", tickets);
 
 	proc->tickets = tickets;
 
-	cprintf("Passing %d Tickets to Syscall  AFTER \n", proc->tickets); 
+	//cprintf("Passing %d Tickets to Syscall  AFTER \n", proc->tickets); 
 
 	return 0;
 }
@@ -124,7 +124,6 @@ sys_getpinfo(void)
 
 
 	struct pstat *pS;
-
 	argptr(0, (void*)&pS, sizeof(*pS));
 	return getpinfo(pS);
 }

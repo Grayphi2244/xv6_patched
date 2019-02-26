@@ -267,7 +267,7 @@ int settickets(int tickets) {
 	{
 		if(tickets %10 != 0)
 		{
-			tickets = 50; //set tickets to the default value of 10
+			tickets = 10; //set tickets to the default value of 10
 		}
 	}
 
@@ -300,8 +300,9 @@ int getpinfo(struct pstat *pstat)
 		pstat->tickets[i] = p->tickets;  //Grab amount of tickets
 		pstat->ticks[i] = p->ticks;  //Process ticks
 
-		cprintf("Process with a PID of %d, has %d tickets, and %d ticks \n", pstat->pid[i], pstat->tickets[i], pstat->ticks[i]);
-
+		if(pstat->pid[i] != 0 && pstat->inuse[i] != 0){
+			cprintf("Process with a PID of %d, has %d tickets, and %d ticks \n", pstat->pid[i], pstat->tickets[i], pstat->ticks[i]);
+		}
 	}
 
 	//Release P-table lock
