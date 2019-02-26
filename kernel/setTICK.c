@@ -2,10 +2,10 @@
 #include "stat.h"
 #include "user.h"
 
-int main(void)
+int main(int tickets)
 {
 
-	setTICK(10);
+	settickets(tickets);
 
 	return 0;
 }

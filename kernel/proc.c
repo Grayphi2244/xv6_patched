@@ -129,9 +129,6 @@ growproc(int n)
   return 0;
 }
 
-
-
-
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
@@ -265,11 +262,12 @@ wait(void)
 int settickets(int tickets) {
   
   //make sure tickets are between 10 and 200 and a multiple of 10 
+  cprintf("tickets are: %d", tickets);
 	if(tickets < 10 || tickets > 200)
 	{
 		if(tickets %10 != 0)
 		{
-			tickets = 10; //set tickets to the default value of 10
+			tickets = 50; //set tickets to the default value of 10
 		}
 	}
 
@@ -313,11 +311,6 @@ int getpinfo(struct pstat *pstat)
 	return 0;
 }
 
-
-
-
-
-
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -359,7 +352,7 @@ scheduler(void)
         minPassProc->ticks = minPassProc->ticks + 1; //add ome more to the ticks 
         minPassProc->pass = minPassProc->pass + minPassProc->stride; //add the stride to the pass 
         minPassProc->state = RUNNING;
-//        cprintf("\nAbout to run Name: %s , PID: %d, with %d amount of tickets  a pass of %d and a stride of %d\n", p->name, p->pid, p->tickets, p->pass, p->stride);
+        cprintf("\naAbout to run Name: %s , PID: %d, with %d amount of tickets  a pass of %d and a stride of %d\n", p->name, p->pid, p->tickets, p->pass, p->stride);
         swtch(&cpu->scheduler, proc->context);
         switchkvm();
       // Process is done running for now.
