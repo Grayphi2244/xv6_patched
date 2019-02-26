@@ -1,108 +1,146 @@
 
-# user programs
-USER_PROGS := \
-	cat\
-	echo\
-	forktest\
-	grep\
-	init\
-	kill\
-	ln\
-	ls\
-	mkdir\
-	rm\
-	sh\
-	stressfs\
-	tester\
-	usertests\
-	wc\
-	zombie\
-	getreadcount\
-	setTICK\
-	getpinfo
+# Kernel objects
+KERNEL_OBJECTS := \
+	bio.o\
+	console.o\
+	exec.o\
+	file.o\
+	fs.o\
+	ide.o\
+	ioapic.o\
+	kalloc.o\
+	kbd.o\
+	lapic.o\
+	main.o\
+	mp.o\
+	picirq.o\
+	pipe.o\
+	proc.o\
+	spinlock.o\
+	string.o\
+	swtch.o\
+	syscall.o\
+	sysfile.o\
+	sysproc.o\
+	timer.o\
+	trapasm.o\
+	trap.o\
+	uart.o\
+	vectors.o\
+	vm.o\
 
-USER_PROGS := $(addprefix user/, $(USER_PROGS))
+KERNEL_OBJECTS := $(addprefix kernel/, $(KERNEL_OBJECTS))
 
-# user library files
-USER_LIBS := \
-	ulib.o\
-	usys.o\
-	printf.o\
-	umalloc.o
+# Objects compiled in a special way for boot or alignment
+KERNEL_SPECIAL_OBJECTS := \
+	bootmain.o\
+	bootasm.o\
+	multiboot.o\
+	data.o\
+	bootother.o\
+	initcode.o
 
-USER_LIBS := $(addprefix user/, $(USER_LIBS))
+KERNEL_SPECIAL_OBJECTS := $(addprefix kernel/, $(KERNEL_SPECIAL_OBJECTS))
 
-USER_OBJECTS = $(USER_PROGS:%=%.o) $(USER_LIBS)
+# Make dependency files
+KERNEL_DEPS := \
+	$(KERNEL_OBJECTS:.o=.d) \
+	$(KERNEL_SPECIAL_OBJECTS:.o=.d)
 
-USER_DEPS := $(USER_OBJECTS:.o=.d)
-
-USER_CLEAN := user/bin $(USER_PROGS) $(USER_OBJECTS) $(USER_DEPS)
+# All generated files
+KERNEL_CLEAN := \
+	$(KERNEL_OBJECTS) \
+	$(KERNEL_SPECIAL_OBJECTS) \
+	$(KERNEL_DEPS) \
+	kernel/vectors.S\
+	kernel/bootblock\
+	kernel/bootblock.out\
+	kernel/bootother.out\
+	kernel/initcode.out\
+	kernel/kernel\
+	bootother\
+	initcode\
+	xv6.img
 
 # add include dir to search path for headers
-USER_CPPFLAGS += -I include
-
+KERNEL_CPPFLAGS += -I include
 # do not search standard system paths for headers
-USER_CPPFLAGS += -nostdinc
-
+KERNEL_CPPFLAGS += -nostdinc
 # disable PIC (position independent code)
-USER_CFLAGS += -fno-pic
-
+KERNEL_CFLAGS += -fno-pic
 # do not use GCC builtin funtions (used to optimize common functions)
-USER_CFLAGS += -fno-builtin
-
+KERNEL_CFLAGS += -fno-builtin
 # disable some optimizations that assume one object will not alias an object
 # of a different type
-USER_CFLAGS += -fno-strict-aliasing
-
+KERNEL_CFLAGS += -fno-strict-aliasing
 # disable stack smashing check
-USER_CFLAGS += -fno-stack-protector
-
+KERNEL_CFLAGS += -fno-stack-protector
 # generate code for 32-bit environment
-USER_CFLAGS += -m32
+KERNEL_CFLAGS += -m32
 
-# generate code for 32-bit environment
-USER_ASFLAGS := $(USER_CFLAGS)
+KERNEL_ASFLAGS += $(KERNEL_CFLAGS)
 
 # FreeBSD ld wants ``elf_i386_fbsd''
-USER_LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null)
-
+KERNEL_LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null)
 # do not link with the host standard library files
-USER_LDFLAGS += -nostdlib
-
+KERNEL_LDFLAGS += -nostdlib
 # use simple contiguous section layout and do not use dynamic linking
-USER_LDFLAGS += --omagic
+KERNEL_LDFLAGS += --omagic
 
-# where program execution should begin
-USER_LDFLAGS += --entry=main
+# bootable disk image
+xv6.img: kernel/bootblock kernel/kernel
+	dd if=/dev/zero of=xv6.img count=10000
+	dd if=kernel/bootblock of=xv6.img conv=notrunc
+	dd if=kernel/kernel of=xv6.img seek=1 conv=notrunc
 
-# location in memory where the program will be loaded
-USER_LDFLAGS += --section-start=.text=0x0
+kernel/kernel:	\
+		$(KERNEL_OBJECTS) kernel/multiboot.o kernel/data.o bootother initcode
+	$(LD) $(LDFLAGS) $(KERNEL_LDFLAGS) \
+		--section-start=.text=0x100000 --entry=main --output=kernel/kernel \
+		kernel/multiboot.o kernel/data.o $(KERNEL_OBJECTS) \
+		-b binary initcode bootother
 
-user/bin:
-	mkdir -p user/bin
+# bootblock is optimized for space
+kernel/bootmain.o: kernel/bootmain.c
+	$(CC) $(CPPFLAGS) $(KERNEL_CPPFLAGS) $(CFLAGS) $(KERNEL_CFLAGS) \
+		 -Os -c -o $@ $<
 
-# user programs
-user/bin/%: user/%.o $(USER_LIBS) | user/bin
-	$(LD) $(LDFLAGS) $(USER_LDFLAGS) --output=$@ $< $(USER_LIBS)
+kernel/bootblock: kernel/bootasm.o kernel/bootmain.o
+	$(LD) $(LDFLAGS) $(KERNEL_LDFLAGS) \
+		--entry=start --section-start=.text=0x7C00 \
+		--output=kernel/bootblock.out kernel/bootasm.o kernel/bootmain.o
+	$(OBJCOPY) -S -O binary -j .text kernel/bootblock.out kernel/bootblock
+	./kernel/sign.pl kernel/bootblock
 
-# forktest has less library code linked in - needs to be small
-# in order to be able to max out the proc table.
-user/bin/forktest: user/forktest.o user/ulib.o user/usys.o | user/bin
-	$(LD) $(LDFLAGS) $(USER_LDFLAGS) --output=$@ $^
+bootother: kernel/bootother.o
+	$(LD) $(LDFLAGS) $(KERNEL_LDFLAGS) \
+		--entry=start --section-start=.text=0x7000 \
+		--output=kernel/bootother.out kernel/bootother.o
+	$(OBJCOPY) -S -O binary kernel/bootother.out $@
+
+initcode: kernel/initcode.o
+	$(LD) $(LDFLAGS) $(KERNEL_LDFLAGS) \
+		--entry=start --section-start=.text=0x0 \
+		--output=kernel/initcode.out kernel/initcode.o
+	$(OBJCOPY) -S -O binary kernel/initcode.out $@
+
+kernel/vectors.S: kernel/vectors.pl
+	perl kernel/vectors.pl > $@
 
 # default recipe for object files
-user/%.o: user/%.c
-	$(CC) $(CPPFLAGS) $(USER_CPPFLAGS) $(CFLAGS) $(USER_CFLAGS) -c -o $@ $<
+kernel/%.o: kernel/%.c
+	$(CC) $(CPPFLAGS) $(KERNEL_CPPFLAGS) $(CFLAGS) $(KERNEL_CFLAGS) -c -o $@ $<
 
-user/%.o: user/%.S
-	$(CC) $(CPPFLAGS) $(USER_CPPFLAGS) $(ASFLAGS) $(USER_ASFLAGS) -c $< -o $@
+kernel/%.o: kernel/%.S
+	$(AS) $(CPPFLAGS) $(KERNEL_CPPFLAGS) $(ASFLAGS) $(KERNEL_ASFLAGS) -c $< -o $@
+
 
 # default recipes for dependency files
-user/%.d: user/%.c
-	$(CC) $(CPPFLAGS) $(USER_CPPFLAGS) $(CFLAGS) $(USER_CFLAGS) \
+kernel/%.d: kernel/%.c
+	$(CC) $(CPPFLAGS) $(KERNEL_CPPFLAGS) $(CFLAGS) $(KERNEL_CFLAGS) \
 		-M -MG $< -MF $@ -MT $@ -MT $(<:.c=.o)
 
-user/%.d: user/%.S
-	$(CC) $(CPPFLAGS) $(USER_CPPFLAGS) $(ASFLAGS) $(USER_ASFLAGS) \
+kernel/%.d: kernel/%.S
+	$(AS) $(CPPFLAGS) $(KERNEL_CPPFLAGS) $(CFLAGS) $(KERNEL_CFLAGS) \
 		-M -MG $< -MF $@ -MT $@ -MT $(<:.S=.o)
 
