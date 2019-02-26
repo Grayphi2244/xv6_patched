@@ -301,7 +301,7 @@ int getpinfo(struct pstat *pstat)
 		pstat->ticks[i] = p->ticks;  //Process ticks
 
 		if(pstat->pid[i] != 0 && pstat->inuse[i] != 0){
-			cprintf("Process with a PID of %d, has %d tickets, and %d ticks \n", pstat->pid[i], pstat->tickets[i], pstat->ticks[i]);
+			cprintf("Process with a PID of %d, has %d ticket and %d ticks \n", pstat->pid[i], pstat->tickets[i], pstat->ticks[i]);
 		}
 	}
 
