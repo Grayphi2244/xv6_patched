@@ -6,18 +6,20 @@
 int main(void)
 {
 	printf(1,"There are %d system calls.\n", getreadcount());
-	int pid =fork();
-	if (pid == 0){
-		pid = setTICK(50);
+
+	int i = 0;
+
+	for(i = 0; i < 4; i++){
+		int pid =fork();
+		if (pid == 0){
+			pid = setTICK(10*i);
+		}
+
 	}
-	pid = setTICK(150);
-	printf(1, "setTICK is %d", pid);
 
 	struct pstat *pS = malloc(sizeof(struct pstat));
 	getpinfo(pS);
 
-	printf(1, "Tickets equals %d \n", pS->tickets);
 
-	wait();
 	exit();
 }
