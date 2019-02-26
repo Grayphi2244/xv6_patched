@@ -125,7 +125,6 @@ sys_getpinfo(void)
 
 	struct pstat *pS;
 
-	argptr( 0, (void*)&pS , sizeof(*pS));
-
+	argptr(0, (void*)&pS, sizeof(*pS));
 	return getpinfo(pS);
 }
