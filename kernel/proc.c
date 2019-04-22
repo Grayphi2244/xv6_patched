@@ -5,7 +5,6 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
-#include "pstat.h"
 
 struct {
   struct spinlock lock;
@@ -46,9 +45,6 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-  //Set default tickets to 10
-  p->tickets = 10;
-  p->stride = 500 / p->tickets;
   release(&ptable.lock);
 
   // Allocate kernel stack if possible.
@@ -97,10 +93,6 @@ userinit(void)
   p->tf->eflags = FL_IF;
   p->tf->esp = PGSIZE;
   p->tf->eip = 0;  // beginning of initcode.S
-
-   //Set default tickets to 10
- // p->tickets = 10;
-  //p->stride = 500 / p->tickets;
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
@@ -153,11 +145,6 @@ fork(void)
   np->parent = proc;
   *np->tf = *proc->tf;
 
-
-   //Send parent tickets & stride to child
-   np->tickets = proc->tickets;
-   np->stride = proc->stride;
-
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
 
@@ -169,7 +156,6 @@ fork(void)
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
-
   return pid;
 }
 
@@ -259,58 +245,6 @@ wait(void)
   }
 }
 
-int settickets(int tickets) {
-  
-  //make sure tickets are between 10 and 200 and a multiple of 10 
-  cprintf("tickets are: %d", tickets);
-	if(tickets < 10 || tickets > 200)
-	{
-		if(tickets %10 != 0)
-		{
-			tickets = 10; //set tickets to the default value of 10
-		}
-	}
-
-  //set the tickets and stride value 
-	proc->tickets = tickets;
-	proc->stride = 500/tickets;
-	return 0;
-}
-
-int getpinfo(struct pstat *pstat)
-{
-	struct proc *p;
-
-	if(pstat == NULL)
-	{
-		return -1;
-	}
-
-	//Initialize counter
-	int i = 0;
-
-
-	//Lock P-table
-	acquire(&ptable.lock);
-
-	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++, i++)
-	{
-		pstat->inuse[i] = ((p->state == UNUSED)?0:1);
-		pstat->pid[i] = p->pid;    //Grab PID of process from Proc struct
-		pstat->tickets[i] = p->tickets;  //Grab amount of tickets
-		pstat->ticks[i] = p->ticks;  //Process ticks
-
-		if(pstat->pid[i] != 0 && pstat->inuse[i] != 0){
-			cprintf("Process with a PID of %d, has %d ticket and %d ticks \n", pstat->pid[i], pstat->tickets[i], pstat->ticks[i]);
-		}
-	}
-
-	//Release P-table lock
-	release(&ptable.lock);
-
-	return 0;
-}
-
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -321,45 +255,33 @@ int getpinfo(struct pstat *pstat)
 void
 scheduler(void)
 {
-  struct proc *p, *minPassProc;
+  struct proc *p;
 
   for(;;){
     // Enable interrupts on this processor.
     sti();
 
-    //reset maxPass
-
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    minPassProc = ptable.proc; //set minPassProc to first process to make sure something will run
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-
-      if(p->state != RUNNABLE){
+      if(p->state != RUNNABLE)
         continue;
-	    }
-      //check if process has less pass than the current minPass process and if so change minPass to be the current process 
-      if(p->pass < minPassProc->pass){
-          minPassProc = p;
-        }
-    
-
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-        proc = minPassProc;
-        switchuvm(minPassProc);
-        minPassProc->ticks = minPassProc->ticks + 1; //add ome more to the ticks 
-        minPassProc->pass = minPassProc->pass + minPassProc->stride; //add the stride to the pass 
-        minPassProc->state = RUNNING;
-//        cprintf("\naAbout to run Name: %s , PID: %d, with %d amount of tickets  a pass of %d and a stride of %d\n", p->name, p->pid, p->tickets, p->pass, p->stride);
-        swtch(&cpu->scheduler, proc->context);
-        switchkvm();
+      proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      swtch(&cpu->scheduler, proc->context);
+      switchkvm();
+
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       proc = 0;
     }
     release(&ptable.lock);
+
   }
 }
 

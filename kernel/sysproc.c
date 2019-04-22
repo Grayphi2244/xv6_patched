@@ -5,16 +5,10 @@
 #include "mmu.h"
 #include "proc.h"
 #include "sysfunc.h"
-#include "pstat.h"
-
-extern int getpinfo(struct pstat *);
-extern int settickets(int);
-extern int totalCall;
-extern int tickets;
 
 int
 sys_fork(void)
-{ 
+{
   return fork();
 }
 
@@ -65,9 +59,8 @@ int
 sys_sleep(void)
 {
   int n;
-
   uint ticks0;
- 
+  
   if(argint(0, &n) < 0)
     return -1;
   acquire(&tickslock);
@@ -93,37 +86,5 @@ sys_uptime(void)
   acquire(&tickslock);
   xticks = ticks;
   release(&tickslock);
-
   return xticks;
-}
-
-int
-sys_getreadcount(void)
-{
-   	return totalCall;
-}
-
-int
-sys_setTICK(int tickets)
-{
-
-	argint(0, &tickets);
-
-	//cprintf("Passing %d Tickets to Syscall  BEFORE \n", tickets);
-
-	proc->tickets = tickets;
-
-	//cprintf("Passing %d Tickets to Syscall  AFTER \n", proc->tickets); 
-
-	return 0;
-}
-
-int
-sys_getpinfo(void)
-{
-
-
-	struct pstat *pS;
-	argptr(0, (void*)&pS, sizeof(*pS));
-	return getpinfo(pS);
 }
