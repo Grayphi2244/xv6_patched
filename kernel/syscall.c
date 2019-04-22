@@ -6,14 +6,25 @@
 #include "x86.h"
 #include "syscall.h"
 #include "sysfunc.h"
+#include "pstat.h"
+
 
 // User code makes a system call with INT T_SYSCALL.
 // System call number in %eax.
 // Arguments on the stack, from the user call to the C
 // library system call function. The saved user %esp points
-// to a saved program counter, and then the first argument.
+// to a saved program counter, and then the first arg 
+
+
+
+int totalCall = 0;
+extern int sys_getreadcount(void);
+extern int sys_setTICK(void);
+extern int sys_getpinfo(void);
+
 
 // Fetch the int at addr from process p.
+
 int
 fetchint(struct proc *p, uint addr, int *ip)
 {
@@ -103,6 +114,9 @@ static int (*syscalls[])(void) = {
 [SYS_wait]    sys_wait,
 [SYS_write]   sys_write,
 [SYS_uptime]  sys_uptime,
+[SYS_getreadcount]  sys_getreadcount,
+[SYS_setTICK]  sys_setTICK,
+[SYS_getpinfo]  sys_getpinfo,
 };
 
 // Called on a syscall trap. Checks that the syscall number (passed via eax)
@@ -111,8 +125,13 @@ void
 syscall(void)
 {
   int num;
-  
+
   num = proc->tf->eax;
+
+  if(num == 6)
+	totalCall++;
+
+
   if(num > 0 && num < NELEM(syscalls) && syscalls[num] != NULL) {
     proc->tf->eax = syscalls[num]();
   } else {
