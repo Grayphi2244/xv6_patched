@@ -14,9 +14,6 @@ int main(void)
 		if (pid == 0){
 			pid = setTICK(10*i);
 		}
-		if(pid > 0){
-			wait();
-		}
 
 	}
 
