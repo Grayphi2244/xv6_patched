@@ -16,10 +16,7 @@ USER_PROGS := \
 	tester\
 	usertests\
 	wc\
-	zombie\
-	getreadcount\
-	setTICK\
-	getpinfo
+	zombie
 
 USER_PROGS := $(addprefix user/, $(USER_PROGS))
 
